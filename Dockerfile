@@ -20,7 +20,9 @@ RUN pip3 install --no-cache-dir "huggingface_hub[cli]"
 # Build PrismML's llama.cpp fork (branch: prism) with CUDA support.
 RUN git clone -b prism https://github.com/PrismML-Eng/llama.cpp.git /opt/llama.cpp
 WORKDIR /opt/llama.cpp
-RUN cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release \
+RUN ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1 \
+    && LIBRARY_PATH=/usr/local/cuda/lib64/stubs:${LIBRARY_PATH} \
+    cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build -j "$(nproc)" --target llama-server
 
 COPY entrypoint.sh /entrypoint.sh
