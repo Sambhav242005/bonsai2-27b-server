@@ -23,17 +23,29 @@ WORKDIR /opt/llama.cpp
 # This build runs on a GitHub Actions runner with no physical GPU, so
 # there's no real libcuda.so (the driver library) - only the CUDA
 # toolkit's stub version, meant for exactly this build-without-a-GPU
-# case. Symlink it and point the linker at it so linking succeeds; the
-# real libcuda.so on Lightning's GPU machine takes over at runtime.
+# case. The real libcuda.so on Lightning's GPU machine takes over at
+# runtime; these stubs are build-time only.
 RUN ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1
-ENV LIBRARY_PATH=/usr/local/cuda/lib64/stubs:$LIBRARY_PATH
 
 # CMAKE_CUDA_ARCHITECTURES is set explicitly because CMake can't
 # auto-detect a GPU that isn't there either. The list below covers
 # V100 (70), T4 (75), A100 (80), A10G/RTX30xx (86), L4/Ada/RTX40xx (89),
 # and H100 (90) - the GPU families you're likely to pick on Lightning AI.
-RUN cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_CUDA_ARCHITECTURES="70;75;80;86;89;90" \
+#
+# Three things are needed to link without a driver present:
+#  - LIBRARY_PATH        -> lets the compiler resolve -lcuda
+#  - LD_LIBRARY_PATH     -> lets ld resolve libcuda.so.1 as a transitive
+#                           dependency of libggml-cuda.so
+#  - -Wl,-rpath-link     -> same, belt-and-braces (what ld's own error
+#                           message suggests)
+# These are scoped to this RUN line on purpose - baking the stub path
+# into a runtime ENV could shadow the real driver on the GPU machine.
+RUN export LIBRARY_PATH=/usr/local/cuda/lib64/stubs:$LIBRARY_PATH \
+    && export LD_LIBRARY_PATH=/usr/local/cuda/lib64/stubs:$LD_LIBRARY_PATH \
+    && cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_CUDA_ARCHITECTURES="70;75;80;86;89;90" \
+        -DCMAKE_EXE_LINKER_FLAGS="-Wl,-rpath-link,/usr/local/cuda/lib64/stubs" \
+        -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-rpath-link,/usr/local/cuda/lib64/stubs" \
     && cmake --build build -j "$(nproc)" --target llama-server
 
 COPY entrypoint.sh /entrypoint.sh
