@@ -55,12 +55,12 @@ RUN chmod +x /entrypoint.sh
 # On an Ada-class GPU (L4, RTX 4090, L40S, RTX 6000 Ada) set GGUF_FILE to
 # Ternary-Bonsai-2-27B-PTQ1_0.gguf instead (5.95GB, faster decode there) -
 # either via this default or an env var override in the Lightning UI.
-ENV HF_REPO=prism-ml/Ternary-Bonsai-2-27B-gguf
-ENV GGUF_FILE=Ternary-Bonsai-2-27B-PQ2_0.gguf
 ENV MODEL_DIR=/models
-ENV CTX_SIZE=32768
 ENV PORT=8080
-
+ENV HF_REPO=prism-ml/Ternary-Bonsai-27B-gguf
+ENV GGUF_FILE=Ternary-Bonsai-27B-PQ2_0.gguf
+ENV MMPROJ_FILE=Ternary-Bonsai-2-27B-mmproj-BF16.gguf
+ENV CTX_SIZE=262144
 EXPOSE 8080
 
 ENTRYPOINT ["/entrypoint.sh"]
