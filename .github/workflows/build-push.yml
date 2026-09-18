@@ -1,0 +1,43 @@
+# Builds the Dockerfile in this repo and pushes it to GHCR (GitHub's
+# container registry) automatically - no local Docker install needed,
+# no separate registry account needed.
+#
+# After this runs once, your image is at:
+#   ghcr.io/<your-github-username>/<this-repo-name>:latest
+#
+# GHCR packages default to private. Either:
+#  - go to your GitHub profile -> Packages -> this package -> Package
+#    settings -> change visibility to Public, so Lightning can pull it
+#    with no credentials, or
+#  - keep it private and paste a GitHub Personal Access Token (with
+#    read:packages scope) into Lightning's "Registry credentials" field.
+
+name: Build and push bonsai2-27b image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
