@@ -20,11 +20,18 @@ RUN pip3 install --no-cache-dir "huggingface_hub[cli]"
 # Build PrismML's llama.cpp fork (branch: prism) with CUDA support.
 RUN git clone -b prism https://github.com/PrismML-Eng/llama.cpp.git /opt/llama.cpp
 WORKDIR /opt/llama.cpp
-# CMAKE_CUDA_ARCHITECTURES is set explicitly because this build runs on a
-# GitHub Actions runner with no physical GPU, so CMake can't auto-detect
-# one. The list below covers V100 (70), T4 (75), A100 (80), A10G/RTX30xx
-# (86), L4/Ada/RTX40xx (89), and H100 (90) - the GPU families you're
-# likely to pick on Lightning AI.
+# This build runs on a GitHub Actions runner with no physical GPU, so
+# there's no real libcuda.so (the driver library) - only the CUDA
+# toolkit's stub version, meant for exactly this build-without-a-GPU
+# case. Symlink it and point the linker at it so linking succeeds; the
+# real libcuda.so on Lightning's GPU machine takes over at runtime.
+RUN ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1
+ENV LIBRARY_PATH=/usr/local/cuda/lib64/stubs:$LIBRARY_PATH
+
+# CMAKE_CUDA_ARCHITECTURES is set explicitly because CMake can't
+# auto-detect a GPU that isn't there either. The list below covers
+# V100 (70), T4 (75), A100 (80), A10G/RTX30xx (86), L4/Ada/RTX40xx (89),
+# and H100 (90) - the GPU families you're likely to pick on Lightning AI.
 RUN cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CUDA_ARCHITECTURES="70;75;80;86;89;90" \
     && cmake --build build -j "$(nproc)" --target llama-server
