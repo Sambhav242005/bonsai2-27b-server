@@ -59,7 +59,7 @@ ENV MODEL_DIR=/models
 ENV PORT=8080
 ENV HF_REPO=prism-ml/Ternary-Bonsai-27B-gguf
 ENV GGUF_FILE=Ternary-Bonsai-27B-PQ2_0.gguf
-ENV MMPROJ_FILE=Ternary-Bonsai-2-27B-mmproj-BF16.gguf
+ENV MMPROJ_FILE=Ternary-Bonsai-27B-mmproj-Q8_0.gguf
 ENV CTX_SIZE=262144
 EXPOSE 8080
 
